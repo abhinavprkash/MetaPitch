@@ -1,0 +1,292 @@
+/* ── Fun Mode Overlay ── */
+
+.funmode-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Upload Phase ── */
+
+.funmode-upload {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 100;
+}
+
+.funmode-dropzone {
+  width: 400px;
+  height: 300px;
+  border: 2px dashed rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.funmode-dropzone:hover,
+.funmode-dropzone.drag-over {
+  border-color: rgba(0, 229, 255, 0.8);
+  box-shadow: 0 0 30px rgba(0, 229, 255, 0.15), inset 0 0 30px rgba(0, 229, 255, 0.05);
+}
+
+.funmode-dropzone-label {
+  color: rgba(0, 229, 255, 0.7);
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.funmode-dropzone-hint {
+  color: rgba(224, 224, 224, 0.3);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+/* ── URL Input ── */
+
+.funmode-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  width: 400px;
+}
+
+.funmode-divider-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 229, 255, 0.15);
+}
+
+.funmode-divider-text {
+  color: rgba(224, 224, 224, 0.3);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.funmode-url-row {
+  display: flex;
+  gap: 8px;
+  width: 400px;
+}
+
+.funmode-url-input {
+  flex: 1;
+  background: rgba(0, 229, 255, 0.05);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 2px;
+  color: rgba(224, 224, 224, 0.8);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.funmode-url-input::placeholder {
+  color: rgba(224, 224, 224, 0.2);
+}
+
+.funmode-url-input:focus {
+  border-color: rgba(0, 229, 255, 0.5);
+}
+
+.funmode-url-btn {
+  padding: 8px 16px;
+}
+
+.funmode-cancel-btn {
+  margin-top: 24px;
+  background: transparent;
+  border: 1px solid rgba(224, 224, 224, 0.2);
+  color: rgba(224, 224, 224, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.funmode-cancel-btn:hover {
+  border-color: rgba(224, 224, 224, 0.5);
+  color: rgba(224, 224, 224, 0.8);
+}
+
+/* ── Extracting Phase ── */
+
+.funmode-extracting {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.funmode-extracting-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.6;
+}
+
+.funmode-scanline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.funmode-scanline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #00e5ff, transparent);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.6), 0 0 60px rgba(0, 229, 255, 0.2);
+  animation: funmode-scan 2s ease-in-out infinite;
+}
+
+@keyframes funmode-scan {
+  0% { top: 0; }
+  50% { top: 100%; }
+  100% { top: 0; }
+}
+
+.funmode-extracting-label {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #00e5ff;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  animation: funmode-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes funmode-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.funmode-error {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff6b35;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-align: center;
+  max-width: 400px;
+}
+
+/* ── Reveal Phase ── */
+
+.funmode-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.funmode-reveal-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.funmode-reveal-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 229, 255, 0.3) 10%,
+    #00e5ff 30%,
+    #fff 50%,
+    #00e5ff 70%,
+    rgba(0, 229, 255, 0.3) 90%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 8px rgba(0, 229, 255, 0.8),
+    0 0 20px rgba(0, 229, 255, 0.4),
+    0 0 40px rgba(0, 229, 255, 0.15);
+  z-index: 1;
+}
+
+/* ── Interactive Phase ── */
+
+.funmode-interactive {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 24px;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.funmode-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  color: rgba(224, 224, 224, 0.8);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.funmode-btn:hover {
+  border-color: rgba(0, 229, 255, 0.6);
+  color: #00e5ff;
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.3);
+}
+
+.funmode-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.funmode-btn-exit {
+  border-color: rgba(224, 224, 224, 0.2);
+  color: rgba(224, 224, 224, 0.5);
+}
+
+.funmode-btn-exit:hover {
+  border-color: rgba(224, 224, 224, 0.5);
+  color: rgba(224, 224, 224, 0.8);
+  text-shadow: none;
+}

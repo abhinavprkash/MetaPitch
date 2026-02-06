@@ -1,0 +1,23 @@
+{
+  "name": "metapitch",
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@google/genai": "^1.39.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  }
+}

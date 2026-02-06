@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "rootDir": "../../",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@services/*": [
+        "../../src/services/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "../../src/services/**/*"
+  ]
+}

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetaPitch 2D Debug Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; color: #ccc; font-family: 'Courier New', monospace; font-size: 13px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  #toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #1a1a1a; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  #toolbar select, #toolbar button, #toolbar input[type=range] { background: #222; color: #ccc; border: 1px solid #444; padding: 4px 8px; font-family: inherit; font-size: 12px; border-radius: 3px; }
+  #toolbar select:focus, #toolbar button:focus { outline: 1px solid #00e5ff; }
+  #toolbar button:hover { background: #333; }
+  #toolbar button.active { background: #00e5ff; color: #000; }
+  #toolbar label { font-size: 11px; color: #888; }
+  .sep { width: 1px; height: 20px; background: #444; }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #canvas-wrap { flex: 1; position: relative; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #sidebar { width: 280px; background: #1a1a1a; border-left: 1px solid #333; overflow-y: auto; padding: 10px; font-size: 11px; }
+  #sidebar h3 { color: #00e5ff; margin: 8px 0 4px; font-size: 12px; }
+  #sidebar pre { background: #0d0d0d; padding: 6px; border-radius: 3px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; font-size: 10px; color: #aaa; }
+  #meta { padding: 4px 12px; background: #1a1a1a; border-bottom: 1px solid #333; font-size: 11px; color: #888; }
+  #meta span { margin-right: 12px; }
+  #meta .event { color: #76ff03; font-weight: bold; }
+  #status { color: #888; font-size: 11px; }
+  #frame-label { min-width: 80px; text-align: center; font-size: 12px; }
+  #speed-label { min-width: 40px; text-align: center; font-size: 11px; color: #888; }
+  #hover-tooltip { position: absolute; pointer-events: none; background: rgba(0,0,0,0.85); border: 1px solid #00e5ff; padding: 6px 10px; border-radius: 4px; font-size: 11px; display: none; z-index: 10; }
+  #hover-tooltip .name { color: #00e5ff; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <label>Game:</label>
+  <select id="game-select"><option>Loading...</option></select>
+  <label>Play:</label>
+  <select id="play-select"><option>—</option></select>
+  <div class="sep"></div>
+  <button id="btn-play">▶ Play</button>
+  <button id="btn-loop" class="active">Loop</button>
+  <input type="range" id="scrubber" min="0" max="0" value="0" style="width:200px">
+  <span id="frame-label">0 / 0</span>
+  <div class="sep"></div>
+  <label>Speed:</label>
+  <input type="range" id="speed" min="0.05" max="2" step="0.05" value="0.25" style="width:60px">
+  <span id="speed-label">0.25x</span>
+  <div class="sep"></div>
+  <button id="btn-vel">Velocity</button>
+  <button id="btn-ori" class="active">Orientation</button>
+  <button id="btn-jersey" class="active">Jerseys</button>
+  <div class="sep"></div>
+  <span id="status"></span>
+</div>
+
+<div id="meta"></div>
+
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="field"></canvas>
+    <div id="hover-tooltip"><span class="name"></span><br><span class="detail"></span></div>
+  </div>
+  <div id="sidebar">
+    <h3>Selected Player</h3>
+    <div id="player-info">Click a player to inspect</div>
+    <h3>Frame Data</h3>
+    <pre id="frame-json">—</pre>
+    <h3>Player List</h3>
+    <pre id="player-list">—</pre>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:3000';
+const FIELD_W = 120, FIELD_H = 53.3;
+const ENDZONE = 10;
+
+// State
+let playData = null;
+let currentFrame = 0;
+let playing = false;
+let looping = true;
+let speed = 0.25;
+let showVel = false;
+let showOri = true;
+let showJersey = true;
+let selectedPlayer = null;
+let hoveredPlayer = null;
+let accum = 0;
+let lastTime = 0;
+
+// DOM
+const canvas = document.getElementById('field');
+const ctx = canvas.getContext('2d');
+const gameSelect = document.getElementById('game-select');
+const playSelect = document.getElementById('play-select');
+const scrubber = document.getElementById('scrubber');
+const frameLabel = document.getElementById('frame-label');
+const speedSlider = document.getElementById('speed');
+const speedLabel = document.getElementById('speed-label');
+const metaDiv = document.getElementById('meta');
+const statusEl = document.getElementById('status');
+const tooltip = document.getElementById('hover-tooltip');
+const btnPlay = document.getElementById('btn-play');
+const btnLoop = document.getElementById('btn-loop');
+const btnVel = document.getElementById('btn-vel');
+const btnOri = document.getElementById('btn-ori');
+const btnJersey = document.getElementById('btn-jersey');
+const playerInfoEl = document.getElementById('player-info');
+const frameJsonEl = document.getElementById('frame-json');
+const playerListEl = document.getElementById('player-list');
+
+// Coordinate transform: field (0-120, 0-53.3) -> canvas pixels
+let scale = 1, offsetX = 0, offsetY = 0;
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const pad = 20;
+  const availW = rect.width - pad * 2;
+  const availH = rect.height - pad * 2;
+  const scaleX = availW / FIELD_W;
+  const scaleY = availH / FIELD_H;
+  scale = Math.min(scaleX, scaleY);
+  offsetX = pad + (availW - FIELD_W * scale) / 2;
+  offsetY = pad + (availH - FIELD_H * scale) / 2;
+}
+function toCanvas(x, y) {
+  return [offsetX + x * scale, offsetY + y * scale];
+}
+function fromCanvas(cx, cy) {
+  return [(cx - offsetX) / scale, (cy - offsetY) / scale];
+}
+window.addEventListener('resize', () => { resize(); draw(); });
+
+// Drawing
+function draw() {
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
+  ctx.clearRect(0, 0, w, h);
+
+  // Field background
+  const [fx0, fy0] = toCanvas(0, 0);
+  const [fx1, fy1] = toCanvas(FIELD_W, FIELD_H);
+  ctx.fillStyle = '#1a3a1a';
+  ctx.fillRect(fx0, fy0, fx1 - fx0, fy1 - fy0);
+
+  // Endzones
+  const [ez1] = toCanvas(ENDZONE, 0);
+  const [ez2] = toCanvas(FIELD_W - ENDZONE, 0);
+  ctx.fillStyle = '#0d2a0d';
+  ctx.fillRect(fx0, fy0, ez1 - fx0, fy1 - fy0);
+  ctx.fillRect(ez2, fy0, fx1 - ez2, fy1 - fy0);
+
+  // Yard lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 1;
+  for (let yard = 10; yard <= 110; yard += 5) {
+    const [lx] = toCanvas(yard, 0);
+    ctx.beginPath();
+    ctx.moveTo(lx, fy0);
+    ctx.lineTo(lx, fy1);
+    ctx.stroke();
+  }
+  // Yard numbers
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = `${Math.max(8, scale * 2.5)}px Courier New`;
+  ctx.textAlign = 'center';
+  for (let yard = 10; yard <= 50; yard += 10) {
+    const num = yard === 50 ? '50' : String(yard);
+    const [lx, ly1] = toCanvas(yard + ENDZONE, 5);
+    const [, ly2] = toCanvas(0, FIELD_H - 5);
+    ctx.fillText(num, lx, ly1);
+    ctx.fillText(num, lx, ly2);
+    if (yard < 50) {
+      const [rx] = toCanvas(FIELD_W - yard - ENDZONE, 5);
+      ctx.fillText(num, rx, ly1);
+      ctx.fillText(num, rx, ly2);
+    }
+  }
+
+  // Hash marks
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  const hashY1 = 23.583, hashY2 = FIELD_H - 23.583;
+  for (let yard = 11; yard <= 109; yard++) {
+    for (const hy of [hashY1, hashY2]) {
+      const [hx, hcy] = toCanvas(yard, hy);
+      ctx.beginPath();
+      ctx.moveTo(hx, hcy - 1.5);
+      ctx.lineTo(hx, hcy + 1.5);
+      ctx.stroke();
+    }
+  }
+
+  // Field border
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(fx0, fy0, fx1 - fx0, fy1 - fy0);
+
+  if (!playData) return;
+  const frame = playData.frames[currentFrame];
+  if (!frame) return;
+
+  // Draw players
+  const playerRadius = Math.max(4, scale * 0.8);
+  for (const [id, pos] of Object.entries(frame.positions)) {
+    const [cx, cy] = toCanvas(pos[0], pos[1]);
+    const player = playData.players[id];
+    const isBall = id === 'ball';
+    const isSelected = id === selectedPlayer;
+    const isHovered = id === hoveredPlayer;
+
+    // Color
+    let color = '#ff6b35'; // ball
+    if (!isBall) {
+      color = player?.team === 'home' ? '#00e5ff' : '#e0e0e0';
+    }
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, isBall ? playerRadius * 0.6 : playerRadius, 0, Math.PI * 2);
+    if (isSelected) {
+      ctx.fillStyle = '#76ff03';
+      ctx.fill();
+    } else if (isHovered) {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.9;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.7;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = isSelected ? '#76ff03' : color;
+    ctx.lineWidth = isSelected ? 2 : 1;
+    ctx.stroke();
+
+    // Orientation arrow
+    if (showOri && !isBall) {
+      const ori = frame.orientations[id];
+      if (ori !== undefined) {
+        const rad = (ori * Math.PI) / 180;
+        const arrowLen = playerRadius * 1.8;
+        const ax = cx + Math.cos(rad) * arrowLen;
+        const ay = cy - Math.sin(rad) * arrowLen; // canvas Y is inverted
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(ax, ay);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Velocity vector
+    if (showVel && !isBall) {
+      const vel = frame.velocities[id];
+      if (vel && (vel[0] !== 0 || vel[1] !== 0)) {
+        const vScale = scale * 0.3;
+        const vx = cx + vel[0] * vScale;
+        const vy = cy - vel[1] * vScale; // canvas Y inverted
+        ctx.strokeStyle = '#76ff03';
+        ctx.globalAlpha = 0.6;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(vx, vy);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Jersey number
+    if (showJersey && !isBall && player?.jersey != null) {
+      ctx.fillStyle = '#000';
+      ctx.font = `bold ${Math.max(7, playerRadius * 0.9)}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(player.jersey), cx, cy + 0.5);
+    }
+  }
+
+  // Event marker on field
+  const eventKey = String(frame.id);
+  const event = playData.events?.[eventKey];
+  if (event) {
+    const ballPos = frame.positions['ball'];
+    if (ballPos) {
+      const [bx, by] = toCanvas(ballPos[0], ballPos[1]);
+      ctx.strokeStyle = '#76ff03';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(bx, by, playerRadius * 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+// Meta display
+function updateMeta() {
+  if (!playData) { metaDiv.innerHTML = ''; return; }
+  const m = playData.meta || {};
+  const frame = playData.frames[currentFrame];
+  const eventKey = frame ? String(frame.id) : '';
+  const event = playData.events?.[eventKey];
+  let html = '';
+  if (m.offense) html += `<span>${m.offense} vs ${m.defense}</span>`;
+  if (m.quarter != null) html += `<span>Q${m.quarter} ${m.down}&${m.yardsToGo}</span>`;
+  if (m.description) html += `<span>${m.description}</span>`;
+  if (event) html += `<span class="event">${event.replace(/_/g, ' ')}</span>`;
+  metaDiv.innerHTML = html;
+}
+
+// Sidebar
+function updateSidebar() {
+  if (!playData) return;
+  const frame = playData.frames[currentFrame];
+  if (!frame) return;
+
+  if (selectedPlayer) {
+    const p = playData.players[selectedPlayer];
+    const pos = frame.positions[selectedPlayer];
+    const vel = frame.velocities[selectedPlayer];
+    const ori = frame.orientations[selectedPlayer];
+    playerInfoEl.innerHTML = `
+      <b style="color:#00e5ff">${p?.name || selectedPlayer}</b> #${p?.jersey ?? '?'}<br>
+      Team: ${p?.team} | Pos: ${p?.position || '?'}<br>
+      XY: [${pos ? pos[0].toFixed(2) + ', ' + pos[1].toFixed(2) : 'N/A'}]<br>
+      Vel: [${vel ? vel[0].toFixed(2) + ', ' + vel[1].toFixed(2) : 'N/A'}]<br>
+      Ori: ${ori != null ? ori.toFixed(1) + '°' : 'N/A'}
+    `;
+  } else {
+    playerInfoEl.textContent = 'Click a player to inspect';
+  }
+
+  // Frame JSON
+  const frameObj = { id: frame.id };
+  if (selectedPlayer) {
+    frameObj.position = frame.positions[selectedPlayer];
+    frameObj.velocity = frame.velocities[selectedPlayer];
+    frameObj.orientation = frame.orientations[selectedPlayer];
+  } else {
+    frameObj.playerCount = Object.keys(frame.positions).length;
+    frameObj.positions = frame.positions;
+  }
+  frameJsonEl.textContent = JSON.stringify(frameObj, null, 2);
+
+  // Player list (sorted by team)
+  const entries = Object.entries(playData.players)
+    .filter(([id]) => id !== 'ball')
+    .sort((a, b) => (a[1].team === b[1].team ? (a[1].jersey ?? 0) - (b[1].jersey ?? 0) : a[1].team < b[1].team ? -1 : 1));
+  playerListEl.textContent = entries.map(([id, p]) =>
+    `${p.team === 'home' ? 'H' : 'A'} #${String(p.jersey ?? '?').padStart(2)} ${p.position?.padEnd(3) ?? '?  '} ${p.name} (${id})`
+  ).join('\n');
+}
+
+// Hit test
+function hitTest(canvasX, canvasY) {
+  if (!playData) return null;
+  const frame = playData.frames[currentFrame];
+  if (!frame) return null;
+  const r = Math.max(6, scale * 1.0);
+  let closest = null, closestDist = r * r;
+  for (const [id, pos] of Object.entries(frame.positions)) {
+    const [cx, cy] = toCanvas(pos[0], pos[1]);
+    const dx = canvasX - cx, dy = canvasY - cy;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < closestDist) { closestDist = d2; closest = id; }
+  }
+  return closest;
+}
+
+// Mouse events
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const hit = hitTest(mx, my);
+  hoveredPlayer = hit;
+  if (hit && playData) {
+    const p = playData.players[hit];
+    const frame = playData.frames[currentFrame];
+    const pos = frame?.positions[hit];
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+    tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+    tooltip.querySelector('.name').textContent = hit === 'ball' ? 'Football' : `#${p?.jersey ?? '?'} ${p?.name ?? hit}`;
+    tooltip.querySelector('.detail').textContent = hit === 'ball' ? '' :
+      `${p?.team} ${p?.position ?? ''} | ${pos ? pos[0].toFixed(1) + ', ' + pos[1].toFixed(1) : 'N/A'}`;
+  } else {
+    tooltip.style.display = 'none';
+  }
+  draw();
+});
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const hit = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+  selectedPlayer = selectedPlayer === hit ? null : hit;
+  updateSidebar();
+  draw();
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoveredPlayer = null;
+  tooltip.style.display = 'none';
+  draw();
+});
+
+// Playback
+function tick(time) {
+  if (!lastTime) lastTime = time;
+  const delta = (time - lastTime) / 1000;
+  lastTime = time;
+
+  if (playing && playData) {
+    accum += delta * speed;
+    while (accum >= 0.1) {
+      accum -= 0.1;
+      if (currentFrame >= playData.frames.length - 1) {
+        if (looping) { currentFrame = 0; } else { playing = false; btnPlay.textContent = '▶ Play'; }
+      } else {
+        currentFrame++;
+      }
+    }
+    scrubber.value = currentFrame;
+    frameLabel.textContent = `${currentFrame + 1} / ${playData.frames.length}`;
+    updateMeta();
+    updateSidebar();
+    draw();
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// Controls
+btnPlay.addEventListener('click', () => {
+  playing = !playing;
+  btnPlay.textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (playing) { accum = 0; lastTime = 0; }
+});
+btnLoop.addEventListener('click', () => {
+  looping = !looping;
+  btnLoop.classList.toggle('active', looping);
+});
+btnVel.addEventListener('click', () => { showVel = !showVel; btnVel.classList.toggle('active', showVel); draw(); });
+btnOri.addEventListener('click', () => { showOri = !showOri; btnOri.classList.toggle('active', showOri); draw(); });
+btnJersey.addEventListener('click', () => { showJersey = !showJersey; btnJersey.classList.toggle('active', showJersey); draw(); });
+
+scrubber.addEventListener('input', (e) => {
+  currentFrame = Number(e.target.value);
+  frameLabel.textContent = `${currentFrame + 1} / ${playData?.frames.length ?? 0}`;
+  updateMeta();
+  updateSidebar();
+  draw();
+});
+
+speedSlider.addEventListener('input', (e) => {
+  speed = Number(e.target.value);
+  speedLabel.textContent = speed.toFixed(2) + 'x';
+});
+
+// Data loading
+async function loadGames() {
+  statusEl.textContent = 'Loading games...';
+  try {
+    const res = await fetch(`${API}/api/games`);
+    const games = await res.json();
+    gameSelect.innerHTML = games.map(g =>
+      `<option value="${g.game_id}">${g.season} W${g.week} — ${g.home_team} vs ${g.away_team}</option>`
+    ).join('');
+    statusEl.textContent = `${games.length} games`;
+    if (games.length > 0) loadPlays(games[0].game_id);
+  } catch (e) {
+    statusEl.textContent = 'Error: Is the server running on :3000?';
+    gameSelect.innerHTML = '<option>No connection</option>';
+  }
+}
+
+async function loadPlays(gameId) {
+  statusEl.textContent = 'Loading plays...';
+  const res = await fetch(`${API}/api/games/${gameId}/plays`);
+  const plays = await res.json();
+  playSelect.innerHTML = plays.map(p =>
+    `<option value="${p.play_id}">P${p.play_id} Q${p.quarter} ${p.down}&${p.yards_to_go} — ${(p.description || '').slice(0, 50)}</option>`
+  ).join('');
+  statusEl.textContent = `${plays.length} plays`;
+  if (plays.length > 0) loadPlay(gameId, plays[0].play_id);
+}
+
+async function loadPlay(gameId, playId) {
+  statusEl.textContent = 'Loading play data...';
+  const res = await fetch(`${API}/api/plays/${gameId}/${playId}`);
+  playData = await res.json();
+  currentFrame = 0;
+  playing = false;
+  selectedPlayer = null;
+  btnPlay.textContent = '▶ Play';
+  scrubber.max = playData.frames.length - 1;
+  scrubber.value = 0;
+  frameLabel.textContent = `1 / ${playData.frames.length}`;
+  statusEl.textContent = `${playData.frames.length} frames, ${Object.keys(playData.players).length} players`;
+  updateMeta();
+  updateSidebar();
+  resize();
+  draw();
+}
+
+gameSelect.addEventListener('change', () => loadPlays(Number(gameSelect.value)));
+playSelect.addEventListener('change', () => loadPlay(Number(gameSelect.value), Number(playSelect.value)));
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ') { e.preventDefault(); btnPlay.click(); }
+  if (e.key === 'ArrowRight' && playData) {
+    currentFrame = Math.min(currentFrame + 1, playData.frames.length - 1);
+    scrubber.value = currentFrame;
+    frameLabel.textContent = `${currentFrame + 1} / ${playData.frames.length}`;
+    updateMeta(); updateSidebar(); draw();
+  }
+  if (e.key === 'ArrowLeft' && playData) {
+    currentFrame = Math.max(currentFrame - 1, 0);
+    scrubber.value = currentFrame;
+    frameLabel.textContent = `${currentFrame + 1} / ${playData.frames.length}`;
+    updateMeta(); updateSidebar(); draw();
+  }
+});
+
+// Init
+resize();
+loadGames();
+</script>
+</body>
+</html>

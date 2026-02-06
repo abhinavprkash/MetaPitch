@@ -1,0 +1,16 @@
+[Unit]
+Description=MetaPitch NFL Analytics
+After=network.target
+
+[Service]
+Type=simple
+User=metapitch
+WorkingDirectory=/home/metapitch/metapitch
+ExecStart=/usr/bin/node server/dist/index.js
+Restart=always
+RestartSec=5
+Environment=PORT=3000
+EnvironmentFile=/home/metapitch/metapitch/.env
+
+[Install]
+WantedBy=multi-user.target

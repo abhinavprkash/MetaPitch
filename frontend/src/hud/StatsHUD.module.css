@@ -1,0 +1,79 @@
+.container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  z-index: 10;
+}
+
+.meta {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  color: rgba(224, 224, 224, 0.6);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+.metaTeams {
+  color: rgba(0, 229, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.statLabel {
+  font-size: 10px;
+  color: rgba(0, 229, 255, 0.7);
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.3);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
+.divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(0, 229, 255, 0.15);
+}
+
+.crosshair {
+  color: rgba(0, 229, 255, 0.25);
+  font-size: 12px;
+}
+
+.event {
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(0, 229, 255, 0.9);
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
