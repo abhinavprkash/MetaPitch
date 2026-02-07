@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "postbuild": "cp -r dist/*/server/src/* dist/ && cp -r dist/*/src/services dist/services 2>/dev/null || true",
     "start": "node dist/index.js"
   },
   "dependencies": {
