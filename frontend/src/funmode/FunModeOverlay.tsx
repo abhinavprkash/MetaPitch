@@ -5,7 +5,9 @@ import { useStore } from '../store'
 import { extractVideo } from '../api'
 import './funmode.css'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? 'http://localhost:3000' : '')
 
 async function estimateCameraPose(base64: string, source: 'mock' | 'gemini' = 'mock') {
   const res = await fetch(`${API}/api/camera-pose?source=${source}`, {
