@@ -46,9 +46,9 @@ export function StatsHUD() {
   const delta = playStats && currentFrame > 0 && currentFrame - 1 < playStats.deltas.length
     ? playStats.deltas[currentFrame - 1]
     : undefined
-  const expYards = posterior ? posterior.expectedYards : stats.expectedYards
-  const endProb = posterior ? posterior.pTouchdown : stats.endzoneProb
-  const beliefShift = delta ? delta.deltaPTd : 0
+  const expXG = posterior ? posterior.expectedXG : stats.goalProb
+  const goalProb = posterior ? posterior.pGoal : stats.goalProb
+  const beliefShift = delta ? delta.deltaPGoal : 0
 
   return (
     <div className={styles.container}>
@@ -74,13 +74,13 @@ export function StatsHUD() {
         {playStats && (
           <>
             <div className={styles.stat}>
-              <span className={styles.statLabel}>EXP YARDS</span>
-              <span className={styles.statValue}>{expYards.toFixed(1)}</span>
+              <span className={styles.statLabel}>EXP xG</span>
+              <span className={styles.statValue}>{expXG.toFixed(2)}</span>
             </div>
             <div className={styles.divider} />
             <div className={styles.stat}>
-              <span className={styles.statLabel}>TD PROB</span>
-              <span className={styles.statValue}>{(endProb * 100).toFixed(0)}%</span>
+              <span className={styles.statLabel}>GOAL PROB</span>
+              <span className={styles.statValue}>{(goalProb * 100).toFixed(0)}%</span>
             </div>
           </>
         )}

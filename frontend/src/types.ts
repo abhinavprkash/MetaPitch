@@ -35,33 +35,32 @@ export type BallPhase = 'held' | 'airborne' | 'loose'
 export type CameraMode = 'top' | '3d' | 'ego'
 
 export interface Stats {
-  expectedYards: number
+  expectedXG: number
   separation: number
-  endzoneProb: number
+  goalProb: number
 }
 
 // Belief engine stats (mirrors src/services/stats/types.ts)
 
 export interface OutcomeDistribution {
-  loss: number
-  short: number
-  medium: number
-  long: number
-  explosive: number
-  touchdown: number
+  turnover: number
+  retention: number
+  progression: number
+  opportunity: number
+  goal: number
 }
 
 export interface FramePosterior {
   frameId: number
-  pTouchdown: number
+  pGoal: number
   pTurnover: number
-  expectedYards: number
+  expectedXG: number
   distribution: OutcomeDistribution
 }
 
 export interface BeliefDelta {
   frameId: number
-  deltaPTd: number
+  deltaPGoal: number
   klDivergence: number
   isPivotal: boolean
 }

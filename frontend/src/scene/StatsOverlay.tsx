@@ -22,8 +22,8 @@ function BeliefRibbon() {
       const xFrac = i / Math.max(1, n - 1)
       const fieldX = xFrac * FIELD_LENGTH
       const scene = toScene(fieldX, 0)
-      // Y = P(TD) scaled up for visibility
-      pts.push(new THREE.Vector3(scene[0], 0.5 + p.pTouchdown * 8, scene[2] - 4))
+      // Y = P(Goal) scaled up for visibility
+      pts.push(new THREE.Vector3(scene[0], 0.5 + p.pGoal * 8, scene[2] - 4))
     }
     return pts
   }, [playStats])
@@ -58,7 +58,7 @@ function BeliefRibbon() {
       {/* Label */}
       <Billboard position={[points[0].x - 2, 3, points[0].z]}>
         <Text fontSize={0.3} color="#00e5ff" anchorX="right" anchorY="middle">
-          P(TD)
+          P(GOAL)
         </Text>
       </Billboard>
     </group>
@@ -86,8 +86,8 @@ function PivotalMarkers() {
       const y = ballPos[1]
       const delta = playStats.deltas.find((d) => d.frameId === fid)
       if (!delta || delta.klDivergence < 0.005) return null
-      return { fi, x, y, kl: delta.klDivergence, deltaTd: delta.deltaPTd ?? 0 }
-    }).filter(Boolean) as Array<{ fi: number; x: number; y: number; kl: number; deltaTd: number }>
+      return { fi, x, y, kl: delta.klDivergence, deltaGoal: delta.deltaPGoal ?? 0 }
+    }).filter(Boolean) as Array<{ fi: number; x: number; y: number; kl: number; deltaGoal: number }>
   }, [playStats, currentPlay])
 
   return (
@@ -95,7 +95,7 @@ function PivotalMarkers() {
       {markers.map((m, i) => {
         const scene = toScene(m.x, m.y)
         const height = Math.min(3 + m.kl * 40, 10) // taller = more pivotal, capped at 10
-        const color = m.deltaTd >= 0 ? '#00e5ff' : '#ff6b35'
+        const color = m.deltaGoal >= 0 ? '#00e5ff' : '#ff6b35'
         return (
           <group key={i} position={[scene[0], 0, scene[2]]}>
             {/* Vertical beam */}
@@ -109,7 +109,7 @@ function PivotalMarkers() {
             {/* Top label */}
             <Billboard position={[0, height + 0.5, 0]}>
               <Text fontSize={0.25} color={color} anchorX="center" anchorY="bottom">
-                {`F${m.fi} ${m.deltaTd >= 0 ? '+' : ''}${(m.deltaTd * 100).toFixed(0)}%`}
+                {`F${m.fi} ${m.deltaGoal >= 0 ? '+' : ''}${(m.deltaGoal * 100).toFixed(0)}%`}
               </Text>
             </Billboard>
           </group>
@@ -221,12 +221,11 @@ function OutcomeDisplay() {
   const { posterior, ballX, ballY } = data
   const scene = toScene(ballX, ballY)
   const buckets = [
-    { label: 'LOSS', value: posterior.distribution.loss, color: '#ff6b35' },
-    { label: '0-5', value: posterior.distribution.short, color: '#4dd0e1' },
-    { label: '5-10', value: posterior.distribution.medium, color: '#00e5ff' },
-    { label: '10-20', value: posterior.distribution.long, color: '#00b8d4' },
-    { label: '20+', value: posterior.distribution.explosive, color: '#00e5ff' },
-    { label: 'TD', value: posterior.distribution.touchdown, color: '#76ff03' },
+    { label: 'TURN', value: posterior.distribution.turnover, color: '#ff6b35' },
+    { label: 'KEEP', value: posterior.distribution.retention, color: '#4dd0e1' },
+    { label: 'PROG', value: posterior.distribution.progression, color: '#00e5ff' },
+    { label: 'OPP', value: posterior.distribution.opportunity, color: '#00b8d4' },
+    { label: 'GOAL', value: posterior.distribution.goal, color: '#76ff03' },
   ]
 
   return (

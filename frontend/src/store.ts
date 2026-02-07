@@ -80,7 +80,7 @@ export const useStore = create<MetaPitchStore>((set, get) => ({
   playbackSpeed: 1,
   cameraMode: '3d',
   predictions: null,
-  stats: { expectedYards: 0, separation: 0, endzoneProb: 0 },
+  stats: { expectedXG: 0, separation: 0, goalProb: 0 },
   statsOverlay: false,
   playStats: null,
   selectedPlayer: null,
@@ -144,9 +144,9 @@ export const useStore = create<MetaPitchStore>((set, get) => ({
         set({
           currentFrame: nextFrame,
           stats: {
-            expectedYards: p.expectedYards,
+            expectedXG: p.expectedXG,
             separation: 0,
-            endzoneProb: p.pTouchdown,
+            goalProb: p.pGoal,
           },
         })
       } else {

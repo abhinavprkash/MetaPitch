@@ -62,9 +62,9 @@ function StatsLoader() {
             const p = stats.posteriors[0]
             useStore.setState({
               stats: {
-                expectedYards: p.expectedYards,
+                expectedXG: p.expectedXG,
                 separation: 0,
-                endzoneProb: p.pTouchdown,
+                goalProb: p.pGoal,
               },
             })
           }
