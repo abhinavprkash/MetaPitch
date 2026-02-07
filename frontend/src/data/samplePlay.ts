@@ -1,0 +1,19 @@
+import { PlayData } from '../types';
+
+export const samplePlay: PlayData = {
+  gameId: 0,
+  playId: 0,
+  frameCount: 1,
+  source: 'mock',
+  players: {
+    'ball': { name: 'Ball', team: 'ball' }
+  },
+  frames: [
+    {
+      id: 1,
+      positions: { 'ball': [50, 25] },
+      velocities: { 'ball': [0, 0] },
+      orientations: { 'ball': 0 }
+    }
+  ]
+};
