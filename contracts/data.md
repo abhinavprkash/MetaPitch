@@ -5,7 +5,7 @@ This document defines the single data format for **Project Blue Lock**.
 ## Producers
 
 1.  **Mock Soccer Engine** — Generates synthetic match scenarios (e.g. Blue Lock challenges).
-2.  **Forward Simulation (Gemini)** — "Metavision" analysis predicting optimal paths.
+2.  **Forward Simulation (Gemini)** — "MetaPitch" analysis predicting optimal paths.
 3.  **Video Extractor** — Extracts player positions from soccer footage.
 
 ## Consumers

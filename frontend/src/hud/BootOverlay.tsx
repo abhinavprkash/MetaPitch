@@ -64,7 +64,7 @@ export function BootOverlay() {
           <line x1="58" y1="50" x2="65" y2="50" stroke="rgba(255, 255, 255, 0.25)" strokeWidth="0.5" />
         </svg>
       </div>
-      <div className={styles.label}>METAVISION</div>
+      <div className={styles.label}>METAPITCH</div>
       {ready ? (
         <button className={styles.enterBtn} onClick={handleEnter}>
           ENTER

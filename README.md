@@ -2,11 +2,11 @@
 
 **"Devour the Field."**
 
-MetaPitch is an AI-powered sports trajectory simulation and analysis platform. It is a 3D Soccer Visualization and Analysis tool powered by Gemini 3. It uses "Metavision" to analyze player positions in real-time and predict the most "Egoistic" path to the goal.
+MetaPitch is an AI-powered sports trajectory simulation and analysis platform. It is a 3D Soccer Visualization and Analysis tool powered by Gemini 3. It uses "MetaPitch" to analyze player positions in real-time and predict the most "Egoistic" path to the goal.
 
 ## Features
 - **3D Holographic Pitch**: Full FIFA-standard soccer field rendering.
-- **Metavision Analysis**: Gemini 3.0 Pro/Flash predicts future player movements and scoring opportunities.
+- **MetaPitch Analysis**: Gemini 3.0 Pro/Flash predicts future player movements and scoring opportunities.
 - **Blue Lock Scenarios**: Pre-loaded with iconic challenges (e.g., Isagi's Direct Shot).
 
 ## Prerequisites
@@ -109,4 +109,4 @@ If you want separate scaling or a CDN-first frontend:
 1. Open the frontend URL
 2. Select the **"Isagi's Direct Shot Awakening"** scenario
 3. Use the **Timeline** to scrub through the play
-4. Click **"Metavision"** to see Gemini analyzing the frame!
+4. Click **"MetaPitch"** to see Gemini analyzing the frame!

@@ -3,10 +3,7 @@ import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-
-// Load .env file only if it exists (development)
 dotenv.config({ path: resolve(__dirname, '../../.env') })
-
 import express from 'express'
 import cors from 'cors'
 import { gamesRouter } from './routes/games.js'
@@ -22,15 +19,6 @@ const PORT = process.env.PORT || 3000
 
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
-
-// Health check endpoint
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    geminiKey: process.env.GEMINI_API_KEY ? 'present' : 'missing',
-    nodeEnv: process.env.NODE_ENV || 'development',
-  })
-})
 
 app.use('/api/games', gamesRouter)
 app.use('/api', playsRouter)
@@ -49,6 +37,4 @@ app.get('*', (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`MetaPitch API server running on http://localhost:${PORT}`)
-  console.log(`GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? 'present' : 'MISSING!'}`)
 })
-
